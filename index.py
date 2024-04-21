@@ -23,18 +23,21 @@ class Index:
                 if tag.name == 'a':
                     begin_writing = True
                     if self.current_section:  # If there's already a section started, finish it
-                        self.sections.append(BeautifulSoup(''.join(str(t) for t in self.current_section), 'html.parser'))
+                        self.sections.append(BeautifulSoup(''.join(str(t) for t in self.current_section), 'html5lib'))
                         self.current_section = []  # Start a new section
                 if(begin_writing):
                     self.current_section.append(tag)
 
         if self.current_section:
-            self.sections.append(BeautifulSoup(''.join(str(t) for t in self.current_section), 'html.parser'))
+            self.sections.append(BeautifulSoup(''.join(str(t) for t in self.current_section), 'html5lib'))
 
         for section in self.sections:
             issue = Issue(section, self.url)
             self.issues.append(issue)
         
         for issue in self.issues:
+            #issue.parse_chapters()
+            issue.extract_cover_image()
+            issue.clean_html()
             issue.write_to_html()
 

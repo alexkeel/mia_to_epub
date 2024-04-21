@@ -8,7 +8,7 @@ isj_index_url = "https://www.marxists.org/history/etol/newspape/isj/index.html"
 
 index_request = http.request('GET', isj_index_url) 
 
-souped_index = BeautifulSoup(index_request.data, 'html.parser')
+souped_index = BeautifulSoup(index_request.data, 'html5lib')
 
 parsed_index = Index(souped_index, isj_index_url)
 
