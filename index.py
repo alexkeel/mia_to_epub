@@ -36,8 +36,5 @@ class Index:
             self.issues.append(issue)
         
         for issue in self.issues:
-            #issue.parse_chapters()
-            issue.extract_cover_image()
-            issue.clean_html()
-            issue.write_to_html()
+            issue.parse()
 

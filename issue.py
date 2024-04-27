@@ -1,5 +1,8 @@
 import os
 import requests
+import urllib3
+from article import Article
+from bs4 import BeautifulSoup
 
 # This file contains the class and methods to handle individual issues
 
@@ -14,6 +17,7 @@ class Issue:
         self.root_url = url
         self.name = body.find('a').get('id')
         self.chapters = []
+        self.http = urllib3.PoolManager()
 
     # Cleans up the html for epub, note this removes images so recommended to call "extract_cover_image" first if the image needs extracting
     def clean_html(self):
@@ -39,16 +43,39 @@ class Issue:
         with open(os.path.join(f"issues/{self.name}", "index.html"), "w", encoding="utf-8") as file:
             file.write(self.body.prettify())
 
+    def parse_metadata(self):
+        # Get title
+        self.metadata["title"] = self.body.find("h5").text
+        # Get authors
+        em_tags = self.body.find_all('em')
+        authors = []
+        for tag in em_tags:
+            # get the preceding text
+            tag_text = tag.text
+
+            if tag_text.startswith('by '):
+                # strip 'by '
+                authors.append(tag_text[3:])
+            elif tag_text.startswith('from '):
+                # strip 'from '
+                authors.append(tag_text[5:])
+
+        authors = set(authors)
+        self.metadata["authors"] = authors
+
     def parse_chapters(self):
+        # Clean the html before parsing
+        self.clean_html()
         # Get links on the page, we can tell if they are links to chapters if they have text content
         link_tags = self.body.find_all('a')
-
         # Loop through the found a_tags
         for tag in link_tags:
             # Check if the tag has a non-empty string
             if tag.string:
-                print(f"Text Content: {tag.string}")
-                print(f"Link: {tag.get('href')}")
+                print(f"Parsing chapter {tag.string}")
+                article = self.http.request('GET', self.format_link(tag.get('href'))) 
+                souped_article = BeautifulSoup(article.data, 'html5lib')
+                self.chapters.append(Article(souped_article, tag.string))
 
     def extract_cover_image(self):
         # Find the last slash in the URL
@@ -58,7 +85,7 @@ class Issue:
         # Pull cover images
         image_tag = self.body.find("img")
         if(image_tag is not None):
-            print(f"Creating {self.name}")
+            print(f"Extracting cover image of {self.name}")
             # Download image
             image_url = f"{url_no_path}/{image_tag['src']}"
             response = requests.get(image_url, stream=True)
@@ -68,3 +95,22 @@ class Issue:
                 with open(os.path.join(f"issues/{self.name}/cover_images", image_url.split("/")[-1]), 'wb') as file:
                     for chunk in response.iter_content(1024):
                         file.write(chunk)
+
+    # Takes a link relative to a chapter and format it to its absolute path
+    def format_link(self, chapter_link):
+        # Count occurrences of relative path "up"
+        prev_dir_count = chapter_link.count("../")
+        # Remove occurrences
+        non_relative_path = chapter_link.replace("../", "")
+        # Remove path elements from root url
+        path_elements = self.root_url.split("/")
+        root_dir = path_elements[:-prev_dir_count - 1]
+
+        return '/'.join(root_dir) + "/" + non_relative_path
+    
+    def parse(self):
+        self.parse_metadata()
+        #self.extract_cover_image()
+        self.parse_chapters()
+        for chapter in self.chapters:
+            chapter.parse()
