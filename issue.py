@@ -75,7 +75,7 @@ class Issue:
                 print(f"Parsing chapter {tag.string}")
                 article = self.http.request('GET', self.format_link(tag.get('href'))) 
                 souped_article = BeautifulSoup(article.data, 'html5lib')
-                self.chapters.append(Article(souped_article, tag.string))
+                self.chapters.append(Article(souped_article, self.format_link(tag.get('href')), tag.string, self.name))
 
     def extract_cover_image(self):
         # Find the last slash in the URL
@@ -113,4 +113,4 @@ class Issue:
         #self.extract_cover_image()
         self.parse_chapters()
         for chapter in self.chapters:
-            chapter.parse()
+            chapter.write_to_html()
