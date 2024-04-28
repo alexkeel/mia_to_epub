@@ -1,6 +1,6 @@
 import os
 import re
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag, NavigableString
 
 # Stores content and meta data of an article, treated as two types. Those treated as books (with chapters and ToC) and those treated as only articles (without chapters)
 
@@ -24,17 +24,45 @@ class Article:
 
         if link_list != None:
             print(f"{self.title} is probably in book form")
-            # This can probably be treated as a book
-            self.is_book = True
+            main_body = self.body.find('body')
+            main_body.contents = []
             # Get links on the page, we can tell if they are links to chapters if they have text content
             link_tags = link_list.find_all('a')
             # Loop through the found a_tags
             for tag in link_tags:
                 # Check if the tag has a non-empty string
                 if tag.string:
-                    print(f"Parsing sub chapter {tag.string} at {self.format_link(tag.get('href'))}")
-                    article = self.http.request('GET', self.format_link(tag.get('href'))) 
-                    souped_article = BeautifulSoup(article.data, 'html5lib')
+                    #print(f"Parsing sub chapter {tag.string} at {self.format_link(tag.get('href'))}")
+                    if "#" in self.format_link(tag.get('href')):
+                        # Contains a table of contents but also a body, standard method of parsing will duplicate
+                        # Split the link 
+                        split_link = tag.get('href').split("#")
+                        actual_link = split_link[0]
+                        anchor_id = split_link[1]
+                        # TODO This shouldn't run each time if the link is the same
+                        if actual_link != "":
+                            article = self.http.request('GET', self.format_link(actual_link)) 
+                        else:
+                            article = self.http.request('GET', self.link) 
+                        souped_article = BeautifulSoup(article.data, 'html5lib')
+                        # Get the anchor tag
+                        anchor_tag = souped_article.find(id=anchor_id)
+                        # Get the content between this tag to the next tag
+                        tags_in_between = []
+                        for sibling in anchor_tag.parent.next_siblings:
+                            if isinstance(sibling, NavigableString):
+                                continue  # Ignore string siblings
+                            if "link" in sibling.get('class', []):
+                                break
+                            tags_in_between.append(sibling)
+            
+                        new_content = ''.join(str(tag) for tag in tags_in_between)
+                        # Parse the string with BeautifulSoup
+                        souped_article = BeautifulSoup(new_content, 'html5lib')
+                    else:
+                        article = self.http.request('GET', self.format_link(tag.get('href'))) 
+                        souped_article = BeautifulSoup(article.data, 'html5lib')
+
                     self.chapters.append(self.clean_html(souped_article))
 
             for chapter in self.chapters:
