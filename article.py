@@ -113,9 +113,6 @@ class Article:
                 link_tag.decompose()
 
         return html
-    
-    def compile_to_epub(self):
-        pass
 
     def write_to_html(self):
         self.body = self.clean_html(self.body) # TODO we are running this twice if it is in book form
@@ -126,3 +123,6 @@ class Article:
         os.makedirs(f"issues/{self.issue}", exist_ok=True)
         with open(os.path.join(f"issues/{self.issue}", f"{file_name}.html"), "w", encoding="utf-8") as file:
             file.write(self.body.prettify())
+
+    def get_content_as_html(self):
+        return self.body.prettify()

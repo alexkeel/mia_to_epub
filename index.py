@@ -37,4 +37,5 @@ class Index:
         
         for issue in self.issues:
             issue.parse()
+            issue.compile_to_epub()
 

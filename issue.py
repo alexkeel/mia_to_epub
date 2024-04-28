@@ -1,6 +1,7 @@
 import os
 import requests
 import urllib3
+import pypub
 from article import Article
 from bs4 import BeautifulSoup
 
@@ -115,3 +116,10 @@ class Issue:
         for chapter in self.chapters:
             chapter.parse()
             chapter.write_to_html()
+
+    def compile_to_epub(self):
+        epub = pypub.Epub(self.name, creator=",".join(self.metadata['authors']))
+        for chapter in self.chapters:
+            epub.add_chapter(pypub.create_chapter_from_html(str.encode(chapter.get_content_as_html()), title=chapter.title))
+        os.makedirs(f"issues/epub/", exist_ok=True)
+        epub.create(f"issues/epub/{self.name}")
