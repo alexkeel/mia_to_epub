@@ -1,54 +1,124 @@
 import os
 import re
+from bs4 import BeautifulSoup
 
 # Stores content and meta data of an article, treated as two types. Those treated as books (with chapters and ToC) and those treated as only articles (without chapters)
 
 class Article:
     title = ""
     authors = []
+    chapters = []
+    is_book = False
 
-    def __init__(self, body, link, title, issue):
+    def __init__(self, body, link, title, issue, http):
         self.body = body
         self.link = link
         self.issue = issue
         self.title = title
+        self.http = http
 
     def parse(self):
-        pass
+        self.body = self.clean_html(self.body)
+        # Check if this is to be treated as a book (does it have chapters)
+        link_list = self.body.find(class_="link")
+
+        if link_list != None:
+            print(f"{self.title} is probably in book form")
+            # This can probably be treated as a book
+            self.is_book = True
+            # Get links on the page, we can tell if they are links to chapters if they have text content
+            link_tags = link_list.find_all('a')
+            # Loop through the found a_tags
+            for tag in link_tags:
+                # Check if the tag has a non-empty string
+                if tag.string:
+                    print(f"Parsing sub chapter {tag.string} at {self.format_link(tag.get('href'))}")
+                    article = self.http.request('GET', self.format_link(tag.get('href'))) 
+                    souped_article = BeautifulSoup(article.data, 'html5lib')
+                    self.chapters.append(self.clean_html(souped_article))
+
+            for chapter in self.chapters:
+                if chapter.body != None:
+                    chapter_body = self.clean_chapter(chapter.body)
+                    main_body = self.body.find('body')
+                    main_body.append(chapter_body)
+
+    # Takes a link relative to a chapter and format it to its absolute path (TODO This should probably be in a utils class as its repeated in issue)
+    def format_link(self, chapter_link):
+        # Count occurrences of relative path "up"
+        prev_dir_count = chapter_link.count("../")
+        # Remove occurrences
+        non_relative_path = chapter_link.replace("../", "")
+        # Remove path elements from root url
+        path_elements = self.link.split("/")
+        root_dir = path_elements[:-prev_dir_count - 1]
+
+        return '/'.join(root_dir) + "/" + non_relative_path
+
+    def clean_chapter(self, chapter):
+        # Remove first h2 (author name)
+        h2 = chapter.find("h2")
+        if h2 != None:
+            h2.decompose()
+
+        # Remove first h1 (article title)
+        h1 = chapter.find("h1")
+        if h1 != None:
+            h1.decompose()
+
+        # Find the tag that contains the text "Top of the page"
+        link_tags = chapter.find_all(_class="link_")
+        for link_tag in link_tags:
+            child = link_tag.find(lambda t: t.get('href') == "#top")
+            if child:
+                link_tag.decompose()
+
+        return chapter
 
     # Cleans up the html for epub
-    def clean_html(self):
+    def clean_html(self, html):
         # Remove linkbacks
-        linkbacks = self.body.find_all(class_="linkback")
+        linkbacks = html.find_all(class_="linkback")
         for linkback in linkbacks:
             linkback.decompose()
         # Remove infobox
-        info_boxes = self.body.find_all(class_="info")
+        info_boxes = html.find_all(class_="info")
         for info in info_boxes:
             info.decompose()           
         # Remove from box
-        from_boxes = self.body.find_all(class_="from")
+        from_boxes = html.find_all(class_="from")
         for from_box in from_boxes:
             from_box.decompose()   
         # Remove infobox
-        top_link = self.body.find(class_="toplink")
+        top_link = html.find(class_="toplink")
         if top_link != None:
             top_link.decompose()               
         # Remove dates
-        dates = self.body.find_all(class_="updat")
+        dates = html.find_all(class_="updat")
         for date in dates:
             date.decompose()
         # Remove first h4 (journal title)
-        journal_title = self.body.find("h4")
+        journal_title = html.find("h4")
         if journal_title != None:
             journal_title.decompose()
         # Remove divider lines
-        lines = self.body.find_all("hr")
+        lines = html.find_all("hr")
         for line in lines:
             line.decompose()
+        # Find the tag that contains the text "Top of the page"
+        link_tags = html.find_all(class_="link")
+        for link_tag in link_tags:
+            child = link_tag.find(lambda t: t.text and ("Top of page" in t.text or "Top of the page" in t.text))
+            if child:
+                link_tag.decompose()
+
+        return html
+    
+    def compile_to_epub(self):
+        pass
 
     def write_to_html(self):
-        self.clean_html()
+        self.body = self.clean_html(self.body) # TODO we are running this twice if it is in book form
         file_name = self.title.lower()  # Convert to lower case
         file_name = file_name.replace(' ', '_')  # Replace spaces with underscores
         file_name = re.sub(r'\W', '', file_name)  # Remove all special characters
