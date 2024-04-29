@@ -60,17 +60,37 @@ class Article:
                         # Parse the string with BeautifulSoup
                         souped_article = BeautifulSoup(new_content, 'html5lib')
                     else:
+                        #print(self.format_link(tag.get('href')))
                         article = self.http.request('GET', self.format_link(tag.get('href'))) 
                         souped_article = BeautifulSoup(article.data, 'html5lib')
 
                     self.chapters.append(self.clean_html(souped_article))
 
+            self.create_toc()
             for chapter in self.chapters:
                 if chapter.body != None:
                     chapter_body = self.clean_chapter(chapter.body)
                     main_body = self.body.find('body')
                     main_body.append(chapter_body)
-
+                else:
+                    print(chapter)
+    def create_toc(self):
+        toc = BeautifulSoup('<html><body></body></html>', 'html5lib')
+        toc_body = toc.find('body')
+        toc_big = toc.new_tag('big')
+        for chapter in self.chapters:
+            title = chapter.find("h3")
+            if title != None:
+                # We give the title an ID to navigate to
+                title['id'] = re.sub(r'\s+', '-', title.text.lower().replace(' ', '-'))
+                # We create the link itself
+                toc_entry = self.body.new_tag("a", href=f"#{title['id']}")
+                toc_entry.string = title.text
+                toc_big.append(toc_entry)
+                toc_big.append(toc.new_tag('br'))
+                toc_body.append(toc_big)
+        self.chapters.insert(0, toc)
+        
     # Takes a link relative to a chapter and format it to its absolute path (TODO This should probably be in a utils class as its repeated in issue)
     def format_link(self, chapter_link):
         # Count occurrences of relative path "up"
