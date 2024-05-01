@@ -12,7 +12,8 @@ class Article:
 
     def __init__(self, body, link, title, issue, http):
         self.body = body
-        self.link = link
+        self.link = link.split("#")[0]
+        print(self.link)
         self.issue = issue
         self.title = title
         self.http = http

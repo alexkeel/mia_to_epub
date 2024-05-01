@@ -64,6 +64,14 @@ class Issue:
         authors = set(authors)
         self.metadata["authors"] = authors
 
+    def remove_duplicate_chapters(self):
+        link_dict = {}
+        for chapter in self.chapters:
+            link_dict[chapter.link] = chapter
+
+        # The values of the dictionary are the unique objects
+        self.chapters = list(link_dict.values())
+
     def parse_chapters(self):
         # Clean the html before parsing
         self.clean_html()
@@ -113,6 +121,7 @@ class Issue:
         self.parse_metadata()
         #self.extract_cover_image()
         self.parse_chapters()
+        self.remove_duplicate_chapters()
         for chapter in self.chapters:
             chapter.parse()
             chapter.write_to_html()
