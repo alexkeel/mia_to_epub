@@ -1,0 +1,48 @@
+# [package]
+# include = ["src/*.py"]
+
+[tool.poetry]
+name = "isj-parser"
+version = "0.0.1"
+description = "Tool for parsing ISJ articles into EPUB format"
+authors = ["Alex Keel"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+beautifulsoup4 = "4.12.0"
+html5lib = "^1.1"
+pypub3 = "^2.0.4"
+pyxml3 = "^0.0.4"
+urllib3 = "^2.2.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.flake8]
+doctests = "True"
+exclude = ".git,.tox,__pycache__"
+show-source = "True"
+statistics = "True"
+max-line-length = 120
+jobs = 6
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "--cov=isj_parser --cov-reports=term-missing --doctest-modules --showlocals -junit-xml=reports/pytest.xml"
+testpaths = [
+    "tests",
+]
+
+[tools.coverage.run]
+branch = "True"
+
+[tools.coverage.report]
+fail_under = 0
+
+[tool.coverage.html]
+directory = "coverage_html_report"
+
+[tool.pylint]
+max-line-length = 120

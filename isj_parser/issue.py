@@ -2,7 +2,7 @@ import os
 import requests
 import urllib3
 import pypub
-from article import Article
+from .article import Article
 from bs4 import BeautifulSoup
 
 # This file contains the class and methods to handle individual issues

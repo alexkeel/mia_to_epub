@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup, Tag
 import os
-from issue import Issue
+from .issue import Issue
 
 # This file contains the tools to parse and process a list of ISJ issues
 
