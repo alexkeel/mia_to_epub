@@ -16,6 +16,8 @@ pypub3 = "^2.0.4"
 pyxml3 = "^0.0.4"
 urllib3 = "^2.2.1"
 requests = "^2.31.0"
+flake8 = "^5.0.4"
+pyproject-flake8 = "^7.0.0"
 
 [build-system]
 requires = ["poetry-core"]

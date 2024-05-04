@@ -1,8 +1,13 @@
 import os
 import re
-from bs4 import BeautifulSoup, Tag, NavigableString
+from bs4 import BeautifulSoup, NavigableString
 
-# Stores content and meta data of an article, treated as two types. Those treated as books (with chapters and ToC) and those treated as only articles (without chapters)
+'''
+    Stores content and meta data of an article, treated as two types.
+    Those treated as books (with chapters and ToC) and those treated
+    as only articles (without chapters)
+'''
+
 
 class Article:
     title = ""
@@ -23,28 +28,28 @@ class Article:
         # Check if this is to be treated as a book (does it have chapters)
         link_list = self.body.find(class_="link")
 
-        if link_list != None:
+        if link_list is not None:
             print(f"{self.title} is probably in book form")
             main_body = self.body.find('body')
             main_body.contents = []
-            # Get links on the page, we can tell if they are links to chapters if they have text content
+            # Get links on the page, we can tell if they are
+            # links to chapters if they have text content
             link_tags = link_list.find_all('a')
             # Loop through the found a_tags
             for tag in link_tags:
                 # Check if the tag has a non-empty string
                 if tag.string:
-                    #print(f"Parsing sub chapter {tag.string} at {self.format_link(tag.get('href'))}")
                     if "#" in self.format_link(tag.get('href')):
-                        # Contains a table of contents but also a body, standard method of parsing will duplicate
-                        # Split the link 
+                        # Contains a table of contents but also a body,
+                        # standard method of parsing will duplicate
                         split_link = tag.get('href').split("#")
                         actual_link = split_link[0]
                         anchor_id = split_link[1]
                         # TODO This shouldn't run each time if the link is the same
                         if actual_link != "":
-                            article = self.http.request('GET', self.format_link(actual_link)) 
+                            article = self.http.request('GET', self.format_link(actual_link))
                         else:
-                            article = self.http.request('GET', self.link) 
+                            article = self.http.request('GET', self.link)
                         souped_article = BeautifulSoup(article.data, 'html5lib')
                         # Get the anchor tag
                         anchor_tag = souped_article.find(id=anchor_id)
@@ -56,32 +61,32 @@ class Article:
                             if "link" in sibling.get('class', []):
                                 break
                             tags_in_between.append(sibling)
-            
+
                         new_content = ''.join(str(tag) for tag in tags_in_between)
                         # Parse the string with BeautifulSoup
                         souped_article = BeautifulSoup(new_content, 'html5lib')
                     else:
-                        #print(self.format_link(tag.get('href')))
-                        article = self.http.request('GET', self.format_link(tag.get('href'))) 
+                        article = self.http.request('GET', self.format_link(tag.get('href')))
                         souped_article = BeautifulSoup(article.data, 'html5lib')
 
                     self.chapters.append(self.clean_html(souped_article))
 
             self.create_toc()
             for chapter in self.chapters:
-                if chapter.body != None:
+                if chapter.body is not None:
                     chapter_body = self.clean_chapter(chapter.body)
                     main_body = self.body.find('body')
                     main_body.append(chapter_body)
                 else:
                     print(chapter)
+
     def create_toc(self):
         toc = BeautifulSoup('<html><body></body></html>', 'html5lib')
         toc_body = toc.find('body')
         toc_big = toc.new_tag('big')
         for chapter in self.chapters:
             title = chapter.find("h3")
-            if title != None:
+            if title is not None:
                 # We give the title an ID to navigate to
                 title['id'] = re.sub(r'\s+', '-', title.text.lower().replace(' ', '-'))
                 # We create the link itself
@@ -91,8 +96,9 @@ class Article:
                 toc_big.append(toc.new_tag('br'))
                 toc_body.append(toc_big)
         self.chapters.insert(0, toc)
-        
-    # Takes a link relative to a chapter and format it to its absolute path (TODO This should probably be in a utils class as its repeated in issue)
+
+    # Takes a link relative to a chapter and format it to its absolute path
+    # (TODO This should probably be in a utils class as its repeated in issue)
     def format_link(self, chapter_link):
         # Count occurrences of relative path "up"
         prev_dir_count = chapter_link.count("../")
@@ -107,12 +113,12 @@ class Article:
     def clean_chapter(self, chapter):
         # Remove first h2 (author name)
         h2 = chapter.find("h2")
-        if h2 != None:
+        if h2 is not None:
             h2.decompose()
 
         # Remove first h1 (article title)
         h1 = chapter.find("h1")
-        if h1 != None:
+        if h1 is not None:
             h1.decompose()
 
         # Find the tag that contains the text "Top of the page"
@@ -133,22 +139,22 @@ class Article:
         # Remove infobox
         info_boxes = html.find_all(class_="info")
         for info in info_boxes:
-            info.decompose()           
+            info.decompose()
         # Remove from box
         from_boxes = html.find_all(class_="from")
         for from_box in from_boxes:
-            from_box.decompose()   
+            from_box.decompose()
         # Remove infobox
         top_link = html.find(class_="toplink")
-        if top_link != None:
-            top_link.decompose()               
+        if top_link is not None:
+            top_link.decompose()
         # Remove dates
         dates = html.find_all(class_="updat")
         for date in dates:
             date.decompose()
         # Remove first h4 (journal title)
         journal_title = html.find("h4")
-        if journal_title != None:
+        if journal_title is not None:
             journal_title.decompose()
         # Remove divider lines
         lines = html.find_all("hr")
@@ -164,7 +170,8 @@ class Article:
         return html
 
     def write_to_html(self):
-        self.body = self.clean_html(self.body) # TODO we are running this twice if it is in book form
+        # TODO we are running this twice if it is in book form
+        self.body = self.clean_html(self.body)
         file_name = self.title.lower()  # Convert to lower case
         file_name = file_name.replace(' ', '_')  # Replace spaces with underscores
         file_name = re.sub(r'\W', '', file_name)  # Remove all special characters

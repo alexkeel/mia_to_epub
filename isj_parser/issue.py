@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 
 # This file contains the class and methods to handle individual issues
 
+
 class Issue:
     metadata = {
         "title": "",
@@ -20,7 +21,8 @@ class Issue:
         self.chapters = []
         self.http = urllib3.PoolManager()
 
-    # Cleans up the html for epub, note this removes images so recommended to call "extract_cover_image" first if the image needs extracting
+    # Cleans up the html for epub, note this removes images so recommended
+    # to call "extract_cover_image" first if the image needs extracting
     def clean_html(self):
         # Remove images
         table = self.body.find('table')
@@ -82,9 +84,11 @@ class Issue:
             # Check if the tag has a non-empty string
             if tag.string:
                 print(f"Parsing chapter {tag.string}")
-                article = self.http.request('GET', self.format_link(tag.get('href'))) 
+                article = self.http.request('GET', self.format_link(tag.get('href')))
                 souped_article = BeautifulSoup(article.data, 'html5lib')
-                self.chapters.append(Article(souped_article, self.format_link(tag.get('href')), tag.string, self.name, self.http))
+                self.chapters.append(Article(souped_article,
+                                             self.format_link(tag.get('href')),
+                                             tag.string, self.name, self.http))
 
     def extract_cover_image(self):
         # Find the last slash in the URL
@@ -93,12 +97,12 @@ class Issue:
         url_no_path = self.root_url[:url_path_index]
         # Pull cover images
         image_tag = self.body.find("img")
-        if(image_tag is not None):
+        if image_tag is not None:
             print(f"Extracting cover image of {self.name}")
             # Download image
             image_url = f"{url_no_path}/{image_tag['src']}"
             response = requests.get(image_url, stream=True)
-            if response.status_code == 200:     
+            if response.status_code == 200:
                 # Open the file in write mode and download the image
                 os.makedirs(f"issues/{self.name}/cover_images", exist_ok=True)
                 with open(os.path.join(f"issues/{self.name}/cover_images", image_url.split("/")[-1]), 'wb') as file:
@@ -116,10 +120,10 @@ class Issue:
         root_dir = path_elements[:-prev_dir_count - 1]
 
         return '/'.join(root_dir) + "/" + non_relative_path
-    
+
     def parse(self):
         self.parse_metadata()
-        #self.extract_cover_image()
+        # self.extract_cover_image()
         self.parse_chapters()
         self.remove_duplicate_chapters()
         for chapter in self.chapters:
@@ -129,6 +133,7 @@ class Issue:
     def compile_to_epub(self):
         epub = pypub.Epub(self.name, creator=",".join(self.metadata['authors']))
         for chapter in self.chapters:
-            epub.add_chapter(pypub.create_chapter_from_html(str.encode(chapter.get_content_as_html()), title=chapter.title))
-        os.makedirs(f"issues/epub/", exist_ok=True)
+            epub.add_chapter(pypub.create_chapter_from_html(str.encode(chapter.get_content_as_html()),
+                                                            title=chapter.title))
+        os.makedirs("issues/epub/", exist_ok=True)
         epub.create(f"issues/epub/{self.name}")
