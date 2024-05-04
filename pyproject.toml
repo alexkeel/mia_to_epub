@@ -16,20 +16,27 @@ pypub3 = "^2.0.4"
 pyxml3 = "^0.0.4"
 urllib3 = "^2.2.1"
 requests = "^2.31.0"
-flake8 = "^5.0.4"
-pyproject-flake8 = "^7.0.0"
+black = "^24.4.2"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.flake8]
-doctests = "True"
-exclude = ".git,.tox,__pycache__"
-show-source = "True"
-statistics = "True"
-max-line-length = 120
-jobs = 6
+[tool.black]
+line-length = 120
+target-version = ['py312']
+include = '\.py$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.venv
+  | __pycache__
+  | build
+  | dist
+  | issues
+)/
+'''
 
 [tool.pytest.ini_options]
 minversion = "6.0"
